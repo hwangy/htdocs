@@ -1,0 +1,51 @@
+html {
+	margin: 0;
+	padding: 0;
+}
+body {
+	font: 16px georgia, sans-serif;
+	line-height: 1.88889;
+	color: #092463;
+	margin: 0;
+	padding: 0;
+	line-height: 1.25em;
+}
+
+.intro {
+	text-align: center;
+}
+header {
+	margin: 0 auto;
+	max-width: 800px;
+	position: relative;
+	text-align: center;
+	width: 100%;
+	z-index: 1;
+}
+header h1 {
+	border-top: 4px solid white;
+	font-size: 90px;
+	display: inline-block;
+	min-height: 70px;
+	margin: 55px auto 0;
+	padding: 0 10px;
+	z-index: 2;
+}
+header h1:after {
+	background-color: #7B94CE;
+	content: '';
+	height: 2px;
+	left: 0;
+	margin-top: -3px;
+	position: absolute;
+	width: 100%;
+	z-index: -1;
+}
+header h2 {
+	color: #7B94CE;
+	font-size: 22px;
+	font-style: italic;
+	font-weight: 400;
+	
+	margin: -5px auto 0;
+}
