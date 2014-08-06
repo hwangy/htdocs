@@ -18,16 +18,18 @@ complex.prototype.add = function(a) {
 };
 
 complex.prototype.multiply = function(a) {
-	this.real = this.real * a.real +
+	var realTmp = this.real * a.real -
 			this.imaginary * a.imaginary;
 	this.imaginary = this.imaginary * a.real +
 			this.real * a.imaginary;
+	this.real = realTmp;
 };
 
 complex.prototype.square = function() {
-	this.real = this.real * this.real +
+	var realTmp  = this.real * this.real -
 			this.imaginary * this.imaginary;
 	this.imaginary = 2 * this.real * this.imaginary;
+	this.real = realTmp;
 };
 
 fractal = {

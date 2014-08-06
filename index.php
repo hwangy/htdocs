@@ -44,10 +44,11 @@
 </section>
 
 <section class="body">
-	<div class="main">
-	</div>
-
-	<div class="end"></div>
+	<canvas oncontextmenu="return false" id="fractal" width="600" height="600">
+		Sorry, canvas is not supported :P
+	</canvas>
+	<script type="text/javascript" src="projects/fractal.js"></script>
+	<!--div class="end"></div!-->
 </section>
 </body>
 </html>
