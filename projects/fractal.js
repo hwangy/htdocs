@@ -2,6 +2,8 @@ var canvas  = document.getElementById("fractal");
 var context = canvas.getContext("2d");
 var canvasData;
 
+var keyArray = [0, 0];
+
 function saveImg() {
 	var img = canvas.toDataURL("image/png").replace("image/png", "image/octet-stream");
 	window.location.href = img;
@@ -43,9 +45,16 @@ fractal = {
 	MaxI: 2.0,
 	iterations: 100,
 	rmax: 30,
+	mouse: {x: 0, y: 0},
+	mouseStart: {x: 0, y: 0},
+	mouseDown: 0,
+	thread: new Worker("buffer.js"),
+
+	bufferedDisplay: new Array(),
 
 	update: function() {
 		if (!fractal.initted) {
+			//Tasks for very first frame
 			canvasData = context.createImageData(fractal.width, fractal.height);
 			fractal.initted = 1;
 		}
@@ -62,7 +71,7 @@ fractal = {
 	
 			context.putImageData(canvasData, 0, 0);
 
-			saveImg();
+			//saveImg();
 			fractal.initted = 2;
 		}
 		setTimeout(fractal.update, 10);
@@ -93,5 +102,56 @@ fractal = {
 		return ((count == fractal.iterations)?0:0xFFFFFF*(count/fractal.iterations));
 	}
 };
+
+function processMouse(e) {
+	fractal.mouseDown = 1;
+
+	fractal.mouseStart = canvas.relMouseCoord(e);
+}
+
+function endMouse(e) {
+	fractal.mouseDown = 0;
+}
+
+function moveMouse(e) {
+	/*fractal.mouse.x = canvas.relMouseCoord(e).x;
+	fractal.mouse.y = canvas.relMouseCoord(e).y;*/
+
+	fractal.mouse = canvas.relMouseCoord(e);
+}
+
+function processKey(e) {
+	if (e.keyCode == 82) keyArray[0] = 1;	//R
+}
+
+function endKey(e) {
+	if (e.keyCode == 82) keyArray[0] = 0;	//R
+}
+
+function relMouseCoord(e) {
+	var totalOffsetX = 0;
+	var totalOffsetY = 0;
+	var canvasX = 0;
+	var canvasY = 0;
+	var currentElement = this;
+	
+	while (currentElement = currentElement.offsetParent) {
+		totalOffsetX += currentElement.offsetLeft - currentElement.scrollLeft;
+		totalOffsetY += currentElement.offsetTop - currentElement.scrollTop;
+	}
+
+	canvasX = e.pageX - totalOffsetX;
+	canvasY = e.pageY - totalOffsetY;
+	return {x:canvasX, y:canvasY};
+}
+
+HTMLCanvasElement.prototype.relMouseCoord = relMouseCoord;
+
+this.canvas.addEventListener('mousedown', this.processMouse, false);
+this.canvas.addEventListener('mouseup', this.endMouse, false);
+this.canvas.addEventListener('mousemove', this.moveMouse, false);
+
+addEventListener('keydown', this.processKey, false);
+addEventListener('keyup', this.endKey, false);
 
 fractal.update();
