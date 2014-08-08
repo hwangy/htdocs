@@ -48,13 +48,47 @@ fractal = {
 	mouse: {x: 0, y: 0},
 	mouseStart: {x: 0, y: 0},
 	mouseDown: 0,
-	thread: new Worker("buffer.js"),
+	thread: 0,
+	RENDER_DISTANCE: 5,
+	progress: 0,
 
-	bufferedDisplay: new Array(),
+	bufferedDisplay: 0,
 
 	update: function() {
 		if (!fractal.initted) {
+			thread = new Worker("projects/buffer.js");
+			/*bufferedDisplay = new Uint32Array(fractal.RENDER_DISTANCE*fractal.RENDER_DISTANCE*
+						fractal.width*fractal.height*Uint8ClampedArray.BYTES_PER_ELEMENT);*/
+
 			//Tasks for very first frame
+			thread.addEventListener('message', function(e) {
+				var data = e.data;
+				switch (data.type) {
+					case 'data':
+						console.log("Received Buffer");
+						bufferedDisplay = new Uint32Array(data.buffer);
+						console.log(bufferedDisplay[20000]);
+						break;
+					case 'prog':
+						console.log("Received progress");
+						progress = data.prog;
+						break;
+					default:
+						console.log("Unrecognized transmission");
+				};
+			}, false);
+			thread.postMessage({
+				'MinR': fractal.MinR,
+				'MaxR': fractal.MaxR,
+				'MinI': fractal.MinI,
+				'MaxI': fractal.MaxI,
+				'dimX': fractal.width,
+				'dimY': fractal.height,
+				'iterations': fractal.iterations,
+				'rmax': fractal.rmax,
+				'RENDER_DISTANCE': fractal.RENDER_DISTANCE
+			});
+
 			canvasData = context.createImageData(fractal.width, fractal.height);
 			fractal.initted = 1;
 		}
