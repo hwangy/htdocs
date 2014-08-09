@@ -51,33 +51,37 @@ fractal = {
 	thread: 0,
 	RENDER_DISTANCE: 5,
 	progress: 0,
+	offX: 0,
+	offY: 0,
 
 	bufferedDisplay: 0,
 
 	update: function() {
 		if (!fractal.initted) {
-			thread = new Worker("projects/buffer.js");
-			/*bufferedDisplay = new Uint32Array(fractal.RENDER_DISTANCE*fractal.RENDER_DISTANCE*
+			var RENDER_DISTANCE = fractal.RENDER_DISTANCE
+			fractal.offX = fractal.width*(RENDER_DISTANCE-1)/2;
+			fractal.offY = fractal.height*(RENDER_DISTANCE-1)/2;
+
+			context.font = "bold 15px Verdana";
+			fractal.thread = new Worker("projects/buffer.js");
+			/*bufferedDisplay = new Uint32Array(RENDER_DISTANCE*RENDER_DISTANCE*
 						fractal.width*fractal.height*Uint8ClampedArray.BYTES_PER_ELEMENT);*/
 
 			//Tasks for very first frame
-			thread.addEventListener('message', function(e) {
+			fractal.thread.addEventListener('message', function(e) {
 				var data = e.data;
 				switch (data.type) {
 					case 'data':
 						console.log("Received Buffer");
-						bufferedDisplay = new Uint32Array(data.buffer);
-						console.log(bufferedDisplay[20000]);
-						break;
-					case 'prog':
-						console.log("Received progress");
-						progress = data.prog;
+						fractal.bufferedDisplay = new Uint32Array(data.buffer);
+						console.log(fractal.bufferedDisplay[20000]);
+						fractal.progress = 1;
 						break;
 					default:
 						console.log("Unrecognized transmission");
 				};
 			}, false);
-			thread.postMessage({
+			fractal.thread.postMessage({
 				'MinR': fractal.MinR,
 				'MaxR': fractal.MaxR,
 				'MinI': fractal.MinI,
@@ -86,16 +90,30 @@ fractal = {
 				'dimY': fractal.height,
 				'iterations': fractal.iterations,
 				'rmax': fractal.rmax,
-				'RENDER_DISTANCE': fractal.RENDER_DISTANCE
+				'RENDER_DISTANCE': RENDER_DISTANCE
 			});
 
 			canvasData = context.createImageData(fractal.width, fractal.height);
 			fractal.initted = 1;
+			
+			fractal.bufferedDisplay = new Uint32Array(RENDER_DISTANCE*RENDER_DISTANCE*
+						fractal.width*fractal.height*Uint32Array.BYTES_PER_ELEMENT);
+			for (var x = 0; x < fractal.width*RENDER_DISTANCE; x++) {
+				for (var y = 0; y < fractal.height*RENDER_DISTANCE; y++) {
+					fractal.bufferedDisplay[x+y*fractal.width*RENDER_DISTANCE] =
+						(x >= fractal.offX && y >= fractal.offY &&
+						 x < fractal.offX + fractal.width &&
+						 y < fractal.offY + fractal.height)?
+						 	fractal.getColor(x-fractal.offX, y-fractal.offY):
+							0x333333;
+				}
+			}
 		}
 		if (fractal.initted < 2) {
 			for (var x = 0; x < fractal.width; x++) {
 				for (var y = 0; y < fractal.height; y++) {
-					var tmp = fractal.getColor(x, y);
+					var tmp = fractal.bufferedDisplay[(x+fractal.offX) + 
+						(y+fractal.offY)*fractal.width*fractal.RENDER_DISTANCE];
 					var r = tmp/(256*256);
 					var g = (tmp - (r | 0)*256*256)/256;
 					var b = (tmp - (r | 0)*256*256 - (g | 0)*256);
@@ -104,9 +122,10 @@ fractal = {
 			}
 	
 			context.putImageData(canvasData, 0, 0);
+			context.fillStyle = "#FFFFFF";
+			if (!fractal.progress) context.fillText("Loading Buffer", 0, 15);
 
 			//saveImg();
-			fractal.initted = 2;
 		}
 		setTimeout(fractal.update, 10);
 	},
@@ -150,8 +169,23 @@ function endMouse(e) {
 function moveMouse(e) {
 	/*fractal.mouse.x = canvas.relMouseCoord(e).x;
 	fractal.mouse.y = canvas.relMouseCoord(e).y;*/
-
+	
 	fractal.mouse = canvas.relMouseCoord(e);
+	
+	if (fractal.mouseDown) {
+		var shiftR = (fractal.mouse.x - fractal.mouseStart.x)/fractal.width * 
+			(fractal.MaxR - fractal.MinR);
+		var shiftI = (fractal.mouse.y - fractal.mouseStart.y)/fractal.height*
+			(fractal.MaxI - fractal.MinI);
+
+		fractal.MinR -= shiftR; fractal.MaxR -= shiftR;
+		fractal.MinI += shiftI; fractal.MaxI += shiftI;
+
+		fractal.offX -= fractal.mouse.x - fractal.mouseStart.x;
+		fractal.offY -= fractal.mouse.y - fractal.mouseStart.y;
+	}
+
+	fractal.mouseStart = fractal.mouse;
 }
 
 function processKey(e) {
@@ -163,10 +197,10 @@ function endKey(e) {
 }
 
 function relMouseCoord(e) {
+	/*var canvasX = 0;
+	var canvasY = 0;
 	var totalOffsetX = 0;
 	var totalOffsetY = 0;
-	var canvasX = 0;
-	var canvasY = 0;
 	var currentElement = this;
 	
 	while (currentElement = currentElement.offsetParent) {
@@ -176,7 +210,9 @@ function relMouseCoord(e) {
 
 	canvasX = e.pageX - totalOffsetX;
 	canvasY = e.pageY - totalOffsetY;
-	return {x:canvasX, y:canvasY};
+	
+	return {x:canvasX, y:canvasY};*/
+	return {x:e.pageX - this.offsetLeft, y:e.pageY - this.offsetTop};
 }
 
 HTMLCanvasElement.prototype.relMouseCoord = relMouseCoord;

@@ -4,6 +4,7 @@
 		<style>#leftt, #leftb, #rightt, #rightb, #topl, 
 			#topr, #botr, #botl {display: none; }</style>
 	<![endif]-->
+	<meta http-equiv="Cache-Control" content="no-cache">
 	<script type="text/javascript">
 		function modSize() {
 			var viewWidth = window.innerWidth;

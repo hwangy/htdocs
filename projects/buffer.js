@@ -82,7 +82,7 @@ function bufferData() {
 
 	for (var x = 0; x < dimX*RENDER_DISTANCE; x++) {
 		progress = 100.0 * (x / (dimX * RENDER_DISTANCE));
-		
+
 		for (var y = 0; y < dimY*RENDER_DISTANCE; y++) {
 			val = new complex(lMinR + x*ref, lMaxI - y*imf);
 			z = new complex(val.real, val.imaginary);

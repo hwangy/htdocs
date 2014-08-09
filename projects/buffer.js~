@@ -82,6 +82,14 @@ function bufferData() {
 
 	for (var x = 0; x < dimX*RENDER_DISTANCE; x++) {
 		progress = 100.0 * (x / (dimX * RENDER_DISTANCE));
+
+		if (x%2) {
+			console.log(x + ", " + progress);
+			self.postMessage({
+				'type': 'prog',
+				'prog': progress
+			});
+		}
 		
 		for (var y = 0; y < dimY*RENDER_DISTANCE; y++) {
 			val = new complex(lMinR + x*ref, lMaxI - y*imf);
@@ -100,7 +108,7 @@ function bufferData() {
 			toSend[x + y*dimX*RENDER_DISTANCE] = color;
 		}
 	}
-	console.log(toSend[500]);
+	console.log(toSend[20000]);
 
 	self.postMessage({
 		'type': 'data',
