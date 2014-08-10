@@ -181,8 +181,8 @@ function moveMouse(e) {
 		fractal.MinR -= shiftR; fractal.MaxR -= shiftR;
 		fractal.MinI += shiftI; fractal.MaxI += shiftI;
 
-		fractal.offX += fractal.mouse.x - fractal.mouseStart.x;
-		fractal.offY += fractal.mouse.y - fractal.mouseStart.y;
+		fractal.offX -= fractal.mouse.x - fractal.mouseStart.x;
+		fractal.offY -= fractal.mouse.y - fractal.mouseStart.y;
 	}
 
 	fractal.mouseStart = fractal.mouse;
