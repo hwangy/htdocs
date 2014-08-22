@@ -1,4 +1,7 @@
 <html lang="en">
+<?php 
+	include "../data/connect.php";
+?>
 <head>
 	<!--[if lte IE 6]>
 		<style>#leftt, #leftb, #rightt, #rightb, #topl, 
@@ -6,6 +9,12 @@
 	<![endif]-->
 	<meta http-equiv="Cache-Control" content="no-cache">
 	<script type="text/javascript">
+		var articles;
+
+		function getArticles() {
+			
+		}
+
 		function modSize() {
 			var viewWidth = window.innerWidth;
 			var viewHeight = window.innerHeight;
