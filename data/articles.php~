@@ -1,0 +1,40 @@
+<?php
+	include 'connect.php';
+
+	function datify($in) {
+		$tmp = split(" ", $in);
+		$tmp = str_replace("-", "/", $tmp[0]);
+
+		return "Written ".$tmp;
+	}
+	
+	$query = "SELECT TITLE, CREATED, AUTHOR, LINK FROM `articles`";
+	$results = mysql_query($query);
+
+	$title = array();
+	$created = array();
+	$author = array();
+	$link = array();
+
+	while (($row = mysql_fetch_assoc($results))) {
+		array_push($title, $row['TITLE']);
+		array_push($created, $row['CREATED']);
+		array_push($author, $row['AUTHOR']);
+		array_push($link, $row['LINK']);
+	}
+	$totalMessage = "<table><tr>";
+
+	#construct message
+	for ($i = 0; $i < sizeOf($title); $i++) {
+		echo $title;
+		if (strcmp($title, "About")) {
+			$totalMessage .= "<td><div class='article' id='".$i."' 
+				onclick=\"go('".$link[$i]."', '".$title[$i]."')\">".$title[$i]."
+				<div id='date'>".datify($created[$i])."</div></div></td>";
+		}
+	}
+
+	$totalMessage .= "</tr></table>";
+
+	echo $totalMessage;
+?>

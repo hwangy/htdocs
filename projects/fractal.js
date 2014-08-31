@@ -57,6 +57,7 @@ fractal = {
 	bufferedDisplay: 0,
 
 	update: function() {
+		console.log("TEST");
 		if (!fractal.initted) {
 			var RENDER_DISTANCE = fractal.RENDER_DISTANCE
 			fractal.offX = fractal.width*(RENDER_DISTANCE-1)/2;

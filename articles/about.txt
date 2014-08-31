@@ -1,0 +1,8 @@
+<tags>
+count	3
+title	About
+author	Yeongwoo Hwang
+link	/articles/about.txt
+
+<article>
+I am Yeongwoo Hwang, an undergraduate student at Carnegie Mellon's School of Computer Science.
