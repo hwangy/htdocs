@@ -57,7 +57,6 @@ fractal = {
 	bufferedDisplay: 0,
 
 	update: function() {
-		console.log("TEST");
 		if (!fractal.initted) {
 			var RENDER_DISTANCE = fractal.RENDER_DISTANCE
 			fractal.offX = fractal.width*(RENDER_DISTANCE-1)/2;
@@ -71,16 +70,13 @@ fractal = {
 			//Tasks for very first frame
 			fractal.thread.addEventListener('message', function(e) {
 				var data = e.data;
-				switch (data.type) {
-					case 'data':
-						console.log("Received Buffer");
+				/*switch (data.type) {
+					case 'data':*/
 						fractal.bufferedDisplay = new Uint32Array(data.buffer);
-						console.log(fractal.bufferedDisplay[20000]);
 						fractal.progress = 1;
-						break;
+					/*	break;
 					default:
-						console.log("Unrecognized transmission");
-				};
+				};*/
 			}, false);
 			fractal.thread.postMessage({
 				'MinR': fractal.MinR,

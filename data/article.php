@@ -37,12 +37,13 @@
 			$tmp = strpos($tomod, "a=\"")+3;
 			$adr = substr($tomod, $tmp, strpos($tomod, "\">")-$tmp);
 			$newtag = "<canvas oncontextmenu=\"return false\" id=\"fractal\" width=\"600\"
-					height=\"600\"></canvas>
-					<script type=\"text/javascript\" src=\"".$adr."\"></script>";
+					height=\"600\"></canvas>";
+					//<script type=\"text/javascript\" src=\"".$adr."\"></script>";
 			$body = $begin.$newtag.$end;
 
-			break;
-		}
+			$totalmsg = $adr."BREAK".$totalmsg;
+		} else break;
+
 	}
 
 	$totalmsg .= "<br /><div id='text'>".$body."</div>";
