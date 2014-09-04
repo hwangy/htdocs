@@ -3,11 +3,23 @@
 	include "data/connect.php";
 ?>
 <head>
+	<script id="clProgramVectorAdd" type="text/x-opencl">
+		kernel void ckVectorAdd(global uint* vectorIn1,
+					global uint* vectorIn2,
+					global uint* vectorOut, uint uiVectorWidth) {
+			uint x = get_global_id(0);
+			if (x >= uiVectorWidth) return;
+			vectorOut[x] = vectorIn1[x] + vectorIn2[x];
+		}
+	</script>
+
 	<!--[if lte IE 6]>
 		<style>#leftt, #leftb, #rightt, #rightb, #topl, 
 			#topr, #botr, #botl {display: none; }</style>
 	<![endif]-->
 	<meta http-equiv="Cache-Control" content="no-cache">
+	
+	<script type="text/javascript" src="data/jquery-1.11.1.min.js"></script>
 	<script type="text/javascript">
 		var articles;
 
@@ -21,7 +33,7 @@
 				if (xmlhttp.readyState==4 && xmlhttp.status==200) {
 					document.getElementById("articles").innerHTML = xmlhttp.responseText;
 				}
-			}
+			};
 
 			xmlhttp.open("POST", "data/articles.php", true);
 			xmlhttp.send();
@@ -52,7 +64,17 @@
 
 			xmlhttp.onreadystatechange = function() {
 				if (xmlhttp.readyState = 4 && xmlhttp.status==200) {
-					document.getElementById("articles").innerHTML = xmlhttp.responseText;
+					var response = xmlhttp.responseText.split("BREAK");
+					
+					document.getElementById("articles").innerHTML = response[response.length-1];
+
+					for (var i = 0; i < response.length-1; i++) {
+						$.ajax({
+							url: "http://localhost/htdocs" + response[i],
+							dataType: "script",
+							success: function(){}
+						});
+					}
 				}
 			}
 
@@ -68,6 +90,116 @@
 					break;
 			}
 		}
+		
+		/**
+			* Experimenting with OpenCL
+			* */
+		function loadKernel(id) {
+			var kernelElement = document.getElementById(id);
+			var kernelSource = kernelElement.innerHTML;
+			if (kernelElement.innerHTML != "") {
+				var mHttpReq = new XMLHttpRequest();
+
+				mHttpReq.onreadystatechange = function() {
+					kernelSource = mHttpReq.responseText;
+					return kernelSource;
+				};
+
+				mHttpReq.open("GET", kernelElement.src);
+				mHttpReq.send("NULL");
+			}
+
+			return kernelSource
+		}
+
+		function vectorAdd(output) {
+			output.innerHTML = "";
+
+			try {
+				if (!detectCL()) return;
+
+				var vectorLength = 30;
+				var UIVector1 = new Uint32Array(vectorLength);
+				var UIVector2 = new Uint32Array(vectorLength);
+
+				for (var i = 0; i < vectorLength; i++) {
+					UIVector1[i] = Math.floor(Math.random() * 100);
+					UIVector2[i] = Math.floor(Math.random() * 100);
+				}
+
+				output.innerHTML = "<br>Vector Length " + vectorLength;
+
+				//Launch OpenCL interface
+				var ctx = webcl.createContext();
+
+				var buffsize = vectorLength * 4;
+				var buffin1 = ctx.createBuffer(WebCL.MEM_READ_ONLY, buffsize);
+				var buffin2 = ctx.createBuffer(WebCL.MEM_READ_ONLY, buffsize);
+				var buffout = ctx.createBuffer(WebCL.MEM_WRITE_ONLY, buffsize);
+
+				var kernelSource = loadKernel("clProgramVectorAdd");
+				var program = ctx.createProgram(kernelSource);
+				var device = ctx.getInfo(WebCL.CONTEXT_DEVICES)[0];
+
+				try {
+					program.build([device], "");
+				} catch (e) {
+					alert ("Failed to build WebCL program. Error "
+						+ program.getBuildInfo (device, WebCL.PROGRAM_BUILD_STATUS)
+						+ ":  " + program.getBuildInfo (device, WebCL.PROGRAM_BUILD_LOG));
+					throw e;
+				}
+
+				var kernel = program.createKernel("ckVectorAdd");
+				kernel.setArg(0, buffin1);
+				kernel.setArg(1, buffin2);
+				kernel.setArg(2, buffout);
+				kernel.setArg(3, new Uint32Array([vectorLength]));
+
+				var cmdQueue = ctx.createCommandQueue(device);
+				cmdQueue.enqueueWriteBuffer (buffin1, false, 0, buffsize, UIvector1);
+				cmdQueue.enqueueWriteBuffer (buffin2, false, 0, buffsize, UIvector2);
+
+				var localWS = [8];
+				var globalWS = [Math.ceil(vectorLength/localWS) * localWS];
+
+				output.innerHTML += "<br>Global work item size: " + globalWS;
+				output.innerHTML += "<br>Local work item size: " + localWS;
+
+				cmdQueue.enqueueNDRangeKernel(kernel, globalWS.length, NULL, globalWS, localWS);
+
+				outBuffer = new Uint32Array(vectorLength);
+				cmdQueue.enqueueReadBuffer(buffout, false, 0 , buffsize, outBuffer);
+				cmdQueue.finish();
+			} catch (e) {
+				document.getElementById("output").innerHTML 
+					+= "<h3>ERROR:</h3><pre style=\"color:red;\">" + e.message + "</pre>";
+				throw e;
+			}
+		}
+
+		function detectCL() {
+			if (window.webcl == undefined) {
+				alert("OPENCL: Unfortunately your system does not support WebCL. " +
+				      "Make sure that you have both the OpenCL driver " +
+			              "and the WebCL browser extension installed.");
+				return false;
+			}
+
+			try {
+				var platforms = webcl.getPlatforms();
+				var devices = [];
+				for (var i in platforms) {
+					var plat = platforms[i];
+					devices[i] = plat.getDevices();
+				}
+				return true;	
+			} catch (e) {
+				alert("OPENCL: Unfortunately platform or device inquiry failed.");
+				return false;
+			}
+		}
+
 	</script>
 	<title id="title">WooBurgh</title>
 
@@ -76,7 +208,9 @@
 
 <div id="about" onclick="go('articles/about.txt', this)">About Me</div>
 
-<body onresize="modSize()" onload="getArticles()" onclick="fractal.update()">
+<body onresize="modSize()" onload="
+			getArticles();
+			detectCL();">
 
 <!--For Page Border --!>
 <div id="border">
@@ -90,6 +224,7 @@
 	<header>
 		<h1 onclick="getArticles()">WooBurgh</h1>
 		<h2>The Wonderous World of HTML/PHP/JAVASCRIPT</h2>
+		<br /><div id="output" onclick="vectorAdd(this)">CONSOLE</div>
 	</header>
 </section>
 
