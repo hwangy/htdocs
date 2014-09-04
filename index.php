@@ -211,7 +211,7 @@
 
 <body onresize="modSize()" onload="
 			getArticles();
-			detectCL();">
+			/*detectCL();*/">
 
 <!--For Page Border --!>
 <div id="border">
