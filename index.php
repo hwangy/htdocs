@@ -63,17 +63,39 @@
 			var result;
 
 			xmlhttp.onreadystatechange = function() {
-				if (xmlhttp.readyState = 4 && xmlhttp.status==200) {
+				if (xmlhttp.readyState == 4 && xmlhttp.status==200) {
 					var response = xmlhttp.responseText.split("BREAK");
 					
 					document.getElementById("articles").innerHTML = response[response.length-1];
 
 					for (var i = 0; i < response.length-1; i++) {
-						$.ajax({
-							url: "http://localhost/htdocs" + response[i],
-							dataType: "script",
-							success: function(){}
-						});
+						/**
+							* This code is only for the purpose of 
+							* being able to use this on my slackbox
+							* as well as the mac. So, it will be unecessary
+							* if this ever gets on an actual webserver
+							* */
+
+						var url = "http://localhost/htdocs" + response[i];
+
+						var test = new window.XMLHttpRequest();
+						test.onreadystatechange = function() {
+							if (test.readyState == 4 && xmlhttp.status == 200) {
+								$.ajax({
+									url: "http://localhost/htdocs" + response[i],
+									dataType: "script",
+									success: function(){}
+								});
+							} else {
+								$.ajax({
+									url: "http://localhost/" + response[i],
+									dataType: "script",
+									success: function(){}
+								});
+							}
+						}
+
+						test.open('HEAD', url);
 					}
 				}
 			}
@@ -211,7 +233,7 @@
 
 <body onresize="modSize()" onload="
 			getArticles();
-			/*detectCL();*/">
+			detectCL();">
 
 <!--For Page Border --!>
 <div id="border">
@@ -225,7 +247,6 @@
 	<header>
 		<h1 onclick="getArticles()">WooBurgh</h1>
 		<h2>The Wonderous World of HTML/PHP/JAVASCRIPT</h2>
-		<br /><div id="output" onclick="vectorAdd(this)">CONSOLE</div>
 	</header>
 </section>
 
