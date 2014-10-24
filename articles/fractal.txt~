@@ -5,5 +5,19 @@ author	Yeongwoo Hwang
 link	/articles/fractal.txt
 
 <article>
-One of the first projects I attempted over the summer was the generation of fractals, using the <a href="http://en.wikipedia.org/wiki/Mandelbrot_set">Mandlebrot Set</a>. This is essentially a function that determines if a imaginary number will diverge to infinity, based on the equation <equation>z_(n+1) = (z_n)^2 + C</equation>. You have most likely seen an image of the Mandlebrot Set. They are fractals, implying that the structure repeats however far one zooms.<br /><center><plugin a="/projects/fractal.js"></plugin></center>The black portions of the Mandlebrot Set Fractal are the numbers, made by using the x coordinate as the real and the y coordinate as the imaginary portion of a complex number, which do not diverge to infinity. The other parts, are colored based on how "quickly" a number approaches infinity. For the purposes of a beautiful fractal, whether the number *actually* diverges to infinity is not as important as if it grows larger than a predefined number within a number of cycles. For my purposes, I settled on a maximum magnitude of 30 for the complex numbers and a limit of 100 cycles. If the number went past 30 before the 100 cycles, the number would be colored bast on when it went past 30. Otherwise, if it never went above 30, that associated pixel would be colored black.</b>
+    <script id="clProgramColor" type="text/x-opencl">
+        kernel void clProgramColor(global const uchar4* src,
+                                   global uchar4* dest, uint width, uint height) {
+            uint x = get_global_id(0);
+            uint y = get_global_id(1);
+
+            if (x >= width || y >= height) return;
+
+            int i = y * width + x;
+
+            uchar4 color = src[i];
+            uchar lum = (uchar)(0.30f * color.x + 0.59f * color.y + 0.11f * color.z);
+            dest[i] = (uchar)(lum, lum, lum, 255);
+    </script>
+One of the first projects I attempted over the summer was the generation of fractals, using the <a href="http://en.wikipedia.org/wiki/Mandelbrot_set">Mandlebrot Set</a>. This is essentially a function that determines if a imaginary number will diverge to infinity, based on the equation <equation>z_(n+1) = (z_n)^2 + C</equation>. You have most likely seen an image of the Mandlebrot Set. They are fractals, implying that the structure repeats however far one zooms.<br /><center><plugin a="htdocs/projects/fractal.js"></plugin></center>The black portions of the Mandlebrot Set Fractal are the numbers, made by using the x coordinate as the real and the y coordinate as the imaginary portion of a complex number, which do not diverge to infinity. The other parts, are colored based on how "quickly" a number approaches infinity. For the purposes of a beautiful fractal, whether the number *actually* diverges to infinity is not as important as if it grows larger than a predefined number within a number of cycles. For my purposes, I settled on a maximum magnitude of 30 for the complex numbers and a limit of 100 cycles. If the number went past 30 before the 100 cycles, the number would be colored bast on when it went past 30. Otherwise, if it never went above 30, that associated pixel would be colored black.</b>
 Fun huh? As devotee to C, I first wrote a simple program in C, using SDL as the graphics engine.

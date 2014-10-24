@@ -1,3 +1,76 @@
+
+/**
+	* Experimenting with OpenCL
+	* */
+function loadKernel(id) {
+    var kernelElement = document.getElementById(id);
+    vectorAdd(kernelElement.text);
+    
+    console.log("TEST1, " + id);
+    if (kernelElement.src != "") {
+		var mHttpReq = new XMLHttpRequest();
+        console.log("TEST2, " + id);
+
+		mHttpReq.onreadystatechange = function() {
+			kernelSource = mHttpReq.responseText;
+            
+            vectorAdd(kernelSource, id);
+		};
+
+		mHttpReq.open("GET", kernelElement.src,false);
+		mHttpReq.send("NULL");
+	}
+}
+
+function vectorAdd(kernelSource, id) {
+    
+    try {
+        if (!detectCL()) return;
+
+        var ctx = webcl.createContext();
+        var width = canvas.width;
+        var height = canvas.height;
+        var buff_size = canvas.width * canvas.height * 4;
+        var buff_in =  ctx.createBuffer(WebCL.MEM_READ_ONLY, buff_size);
+        var buff_out = ctx.createBuffer(WebCL.MEM_WRITE_ONLY, buff_size);
+
+        var program = ctx.createProgram(kernelSource);
+        var device = ctx.getInfo(WebCL.CONTEXT_DEVICES)[0];
+
+        try {
+            program.build([device], "");
+        } catch (e) {
+            alert ("Failed to build. Error " +
+                   program.getBuildInfo (device, WebCL.PROGRAM_BUILD_STATUS) +
+                   ": " + program.getBuildInfo (device, WebCL.PROGRAM_BUILD_LOG));
+            throw e;
+        }
+
+        console.log(id);
+        var kernel = program.createKernel(id);
+        kernel.setArg(0, buff_in);  kernel.setArg(1, buff_out);
+        kernel.setArg(2, new Uint32Array([width]));
+        kernel.setArg(3, new Uint32Array([height]));
+
+        var cmdQueue = ctx.createCommandQueue(device);
+        cmdQueue.enqueueWriteBuffer(
+                buff_in, false, 0, buffsize, context.getImageData(0,0,width,height).data);
+        var localWS = [16, 4];
+        var globalWS = [Math.ceil (width/localWS[0]) * localWS[0],
+                        Math.ceil (height/localWS[1]) * localWS[1]];
+
+        cmdQueue.enqueueNDRangeKernel(kernel, globalWS.length, null, globalWS, localWS);
+        cmdQueue.enqueueReadBuffer(buff_out, false, 0, buffsize, context.getImageData(0,0,width,height).data);
+        cmdQueue.finish();
+	} catch (e) {
+		console.log("ERROR " + e.message);
+		throw e;
+	}
+}
+
+/**
+ * Begin actual fractal code
+ */
 var canvas  = document.getElementById("fractal");
 var context = canvas.getContext("2d");
 var canvasData;
@@ -120,6 +193,10 @@ fractal = {
 	
 			context.putImageData(canvasData, 0, 0);
 			context.fillStyle = "#FFFFFF";
+
+            if (keyArray[1]) {
+                loadKernel("clProgramColor");
+            }
 			if (!fractal.progress) context.fillText("Loading Buffer", 0, 15);
 
 			//saveImg();
@@ -187,10 +264,12 @@ function moveMouse(e) {
 
 function processKey(e) {
 	if (e.keyCode == 82) keyArray[0] = 1;	//R
+    if (e.keyCode == 68) keyArray[1] = 1;   //D -> Desaturate
 }
 
 function endKey(e) {
 	if (e.keyCode == 82) keyArray[0] = 0;	//R
+    if (e.keyCode == 68) keyArray[1] = 0;   //D
 }
 
 function relMouseCoord(e) {

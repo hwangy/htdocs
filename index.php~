@@ -3,15 +3,20 @@
 	include "data/connect.php";
 ?>
 <head>
-	<script id="clProgramVectorAdd" type="text/x-opencl">
-		kernel void ckVectorAdd(global uint* vectorIn1,
-					global uint* vectorIn2,
-					global uint* vectorOut, uint uiVectorWidth) {
-			uint x = get_global_id(0);
-			if (x >= uiVectorWidth) return;
-			vectorOut[x] = vectorIn1[x] + vectorIn2[x];
-		}
-	</script>
+    <!--script id="clProgramGetColor" type="text/x-opencl">
+        kernel void clProcessImage(global const uchar4* src,
+                                   global uchar4* dest, uint width, uint height) {
+            uint x = get_global_id(0);
+            uint y = get_global_id(1);
+
+            if (x >= width || y >= height) return;
+
+            int i = y * width + x;
+
+            uchar4 color = src[i];
+            uchar lum = (uchar)(0.30f * color.x + 0.59f * color.y + 0.11f * color.z);
+            dst[i] = (uchar)(lum, lum, lum, 255);
+    </script-->
 
 	<!--[if lte IE 6]>
 		<style>#leftt, #leftb, #rightt, #rightb, #topl, 
@@ -63,17 +68,39 @@
 			var result;
 
 			xmlhttp.onreadystatechange = function() {
-				if (xmlhttp.readyState = 4 && xmlhttp.status==200) {
+				if (xmlhttp.readyState == 4 && xmlhttp.status==200) {
 					var response = xmlhttp.responseText.split("BREAK");
 					
 					document.getElementById("articles").innerHTML = response[response.length-1];
 
 					for (var i = 0; i < response.length-1; i++) {
-						$.ajax({
-							url: "http://localhost/htdocs" + response[i],
-							dataType: "script",
-							success: function(){}
-						});
+						/**
+							* This code is only for the purpose of 
+							* being able to use this on my slackbox
+							* as well as the mac. So, it will be unecessary
+							* if this ever gets on an actual webserver
+							* */
+
+						var url = "http://localhost/htdocs" + response[i];
+
+						var test = new window.XMLHttpRequest();
+						test.onreadystatechange = function() {
+							if (test.readyState == 4 && xmlhttp.status == 200) {
+								$.ajax({
+									url: "http://localhost/htdocs" + response[i],
+									dataType: "script",
+									success: function(){}
+								});
+							} else {
+								$.ajax({
+									url: "http://localhost/" + response[i],
+									dataType: "script",
+									success: function(){}
+								});
+							}
+						}
+
+						test.open('HEAD', url);
 					}
 				}
 			}
@@ -88,93 +115,6 @@
 				case 8:
 					getArticles();
 					break;
-			}
-		}
-		
-		/**
-			* Experimenting with OpenCL
-			* */
-		function loadKernel(id) {
-			var kernelElement = document.getElementById(id);
-			var kernelSource = kernelElement.innerHTML;
-			if (kernelElement.innerHTML != "") {
-				var mHttpReq = new XMLHttpRequest();
-
-				mHttpReq.onreadystatechange = function() {
-					kernelSource = mHttpReq.responseText;
-					return kernelSource;
-				};
-
-				mHttpReq.open("GET", kernelElement.src);
-				mHttpReq.send("NULL");
-			}
-
-			return kernelSource
-		}
-
-		function vectorAdd(output) {
-			output.innerHTML = "";
-
-			try {
-				if (!detectCL()) return;
-
-				var vectorLength = 30;
-				var UIVector1 = new Uint32Array(vectorLength);
-				var UIVector2 = new Uint32Array(vectorLength);
-
-				for (var i = 0; i < vectorLength; i++) {
-					UIVector1[i] = Math.floor(Math.random() * 100);
-					UIVector2[i] = Math.floor(Math.random() * 100);
-				}
-
-				output.innerHTML = "<br>Vector Length " + vectorLength;
-
-				//Launch OpenCL interface
-				var ctx = webcl.createContext();
-
-				var buffsize = vectorLength * 4;
-				var buffin1 = ctx.createBuffer(WebCL.MEM_READ_ONLY, buffsize);
-				var buffin2 = ctx.createBuffer(WebCL.MEM_READ_ONLY, buffsize);
-				var buffout = ctx.createBuffer(WebCL.MEM_WRITE_ONLY, buffsize);
-
-				var kernelSource = loadKernel("clProgramVectorAdd");
-				var program = ctx.createProgram(kernelSource);
-				var device = ctx.getInfo(WebCL.CONTEXT_DEVICES)[0];
-
-				try {
-					program.build([device], "");
-				} catch (e) {
-					alert ("Failed to build WebCL program. Error "
-						+ program.getBuildInfo (device, WebCL.PROGRAM_BUILD_STATUS)
-						+ ":  " + program.getBuildInfo (device, WebCL.PROGRAM_BUILD_LOG));
-					throw e;
-				}
-
-				var kernel = program.createKernel("ckVectorAdd");
-				kernel.setArg(0, buffin1);
-				kernel.setArg(1, buffin2);
-				kernel.setArg(2, buffout);
-				kernel.setArg(3, new Uint32Array([vectorLength]));
-
-				var cmdQueue = ctx.createCommandQueue(device);
-				cmdQueue.enqueueWriteBuffer (buffin1, false, 0, buffsize, UIvector1);
-				cmdQueue.enqueueWriteBuffer (buffin2, false, 0, buffsize, UIvector2);
-
-				var localWS = [8];
-				var globalWS = [Math.ceil(vectorLength/localWS) * localWS];
-
-				output.innerHTML += "<br>Global work item size: " + globalWS;
-				output.innerHTML += "<br>Local work item size: " + localWS;
-
-				cmdQueue.enqueueNDRangeKernel(kernel, globalWS.length, NULL, globalWS, localWS);
-
-				outBuffer = new Uint32Array(vectorLength);
-				cmdQueue.enqueueReadBuffer(buffout, false, 0 , buffsize, outBuffer);
-				cmdQueue.finish();
-			} catch (e) {
-				document.getElementById("output").innerHTML 
-					+= "<h3>ERROR:</h3><pre style=\"color:red;\">" + e.message + "</pre>";
-				throw e;
 			}
 		}
 
@@ -200,7 +140,8 @@
 			}
 		}
 
-	</script>
+    </script>
+
 	<title id="title">WooBurgh</title>
 
 	<link rel="stylesheet" media="screen" href="style.css">
@@ -210,7 +151,7 @@
 
 <body onresize="modSize()" onload="
 			getArticles();
-			detectCL();">
+			detectCL();loadKernel('clProgramVectorAdd');">
 
 <!--For Page Border --!>
 <div id="border">
@@ -224,7 +165,6 @@
 	<header>
 		<h1 onclick="getArticles()">WooBurgh</h1>
 		<h2>The Wonderous World of HTML/PHP/JAVASCRIPT</h2>
-		<br /><div id="output" onclick="vectorAdd(this)">CONSOLE</div>
 	</header>
 </section>
 
@@ -241,7 +181,9 @@
 				<td><div class="article" id="0">It appears there are no articles....</div></td>
 			</tr>
 		</table>
-	</div>
+    </div>
+
+    <div id="output"></div>
 </section>
 </body>
 </html>
