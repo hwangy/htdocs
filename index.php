@@ -3,21 +3,6 @@
 	include "data/connect.php";
 ?>
 <head>
-    <!--script id="clProcessImage" type="text/x-opencl">
-        kernel void clProcessImage(global const uchar4* src,
-                                   global uchar4* dest, uint width, uint height) {
-            uint x = get_global_id(0);
-            uint y = get_global_id(1);
-
-            if (x >= width || y >= height) return;
-
-            int i = y * width + x;
-
-            uchar4 color = src[i];
-            uchar lum = (uchar)(0.30f * color.x + 0.59f * color.y + 0.11f * color.z);
-            dst[i] = (uchar)(lum, lum, lum, 255);
-    </script-->
-
 	<!--[if lte IE 6]>
 		<style>#leftt, #leftb, #rightt, #rightb, #topl, 
 			#topr, #botr, #botl {display: none; }</style>

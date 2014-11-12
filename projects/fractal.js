@@ -5,6 +5,7 @@
 
 function loadKernel(id) {
     var kernelElement = document.getElementById(id);
+    var kernelSource = kernelElement.text;
     
     if (kernelElement.src != "") {
 		var mHttpReq = new XMLHttpRequest();
@@ -12,24 +13,24 @@ function loadKernel(id) {
 		mHttpReq.onreadystatechange = function() {
 			kernelSource = mHttpReq.responseText;
             
-            vectorAdd(kernelSource, id);
+            return kernelSource;
 		};
 
 		mHttpReq.open("GET", kernelElement.src,false);
 		mHttpReq.send("NULL");
 	}
-    
-    vectorAdd(kernelElement.text, id);
+    return kernelSource;    
 }
 
-function vectorAdd(kernelSource, id) {
-    
+function desaturate(id, input) { 
     try {
         if (!detectCL()) return;
+        var kernelSource = loadKernel("clProcessImage");
+        
         var ctx = webcl.createContext();
-        var width = canvas.width;
-        var height = canvas.height;
-        var buff_size = canvas.width * canvas.height * 4;
+        var width = canvas.width*fractal.RENDER_DISTANCE;
+        var height = canvas.height*fractal.RENDER_DISTANCE;
+        var buff_size = width * height * 4;
         var buff_in =  ctx.createBuffer(WebCL.MEM_READ_ONLY, buff_size);
         var buff_out = ctx.createBuffer(WebCL.MEM_WRITE_ONLY, buff_size);
         var program = ctx.createProgram(kernelSource);
@@ -49,21 +50,20 @@ function vectorAdd(kernelSource, id) {
         kernel.setArg(3, new Uint32Array([height]));
 
         var cmdQueue = ctx.createCommandQueue(device);
-        var pixels = context.getImageData(0,0,width,height);
-        console.log(pixels.data[0]);
+        //var pixels = context.getImageData(0,0,width,height);
+        //console.log(input.data[0]);
         cmdQueue.enqueueWriteBuffer(
-                buff_in, false, 0, buff_size, pixels.data);
+                buff_in, false, 0, buff_size, input);
         var localWS = [16, 4];
         var globalWS = [Math.ceil (width/localWS[0]) * localWS[0],
                         Math.ceil (height/localWS[1]) * localWS[1]];
 
         cmdQueue.enqueueNDRangeKernel(kernel, globalWS.length, null, globalWS, localWS);
-        cmdQueue.enqueueReadBuffer(buff_out, false, 0, buff_size, pixels.data);
+        cmdQueue.enqueueReadBuffer(buff_out, false, 0, buff_size, input);
         cmdQueue.finish();
        
-        console.log("PROCESSED"); 
-        context.putImageData(pixels, 0, 0);
-        //console.log(pixels.data[0]);
+        return input;
+        //context.putImageData(pixels, 0, 0);
         
 	} catch (e) {
 		console.log("ERROR " + e.message);
@@ -132,9 +132,9 @@ fractal = {
 	offY: 0,
 
 	bufferedDisplay: 0,
+    desatDisplay: 0,
 
 	update: function() {
-        //if (!fractal.cl_initted) {loadKernel("clProcessImage");fractal.cl_initted = 1;}
 		if (!fractal.initted) {
 			var RENDER_DISTANCE = fractal.RENDER_DISTANCE
 			fractal.offX = fractal.width*(RENDER_DISTANCE-1)/2;
@@ -142,8 +142,6 @@ fractal = {
 
 			context.font = "bold 15px Verdana";
 			fractal.thread = new Worker("projects/buffer.js");
-			/*bufferedDisplay = new Uint32Array(RENDER_DISTANCE*RENDER_DISTANCE*
-						fractal.width*fractal.height*Uint8ClampedArray.BYTES_PER_ELEMENT);*/
 
 			//Tasks for very first frame
 			fractal.thread.addEventListener('message', function(e) {
@@ -151,6 +149,8 @@ fractal = {
 				/*switch (data.type) {
 					case 'data':*/
 						fractal.bufferedDisplay = new Uint32Array(data.buffer);
+                        //var tmp = fractal.bufferedDisplay.subarray(0,fractal.bufferedDisplay.length);
+                        //fractal.desatDisplay = desaturate("clProcessImage", tmp);
 						fractal.progress = 1;
 					/*	break;
 					default:
@@ -187,7 +187,10 @@ fractal = {
 		if (fractal.initted < 2) {
 			for (var x = 0; x < fractal.width; x++) {
 				for (var y = 0; y < fractal.height; y++) {
-					var tmp = fractal.bufferedDisplay[(x+fractal.offX) + 
+                    var tmp;
+					if (!fractal.cl_initted) tmp = fractal.bufferedDisplay[(x+fractal.offX) + 
+						(y+fractal.offY)*fractal.width*fractal.RENDER_DISTANCE];
+                    else tmp = fractal.desatDisplay[(x+fractal.offX) + 
 						(y+fractal.offY)*fractal.width*fractal.RENDER_DISTANCE];
 					var r = tmp/(256*256);
 					var g = (tmp - (r | 0)*256*256)/256;
@@ -195,15 +198,13 @@ fractal = {
 					fractal.color(x, y, r, g, b, 256);
 				}
 			}
-			if (fractal.cl_initted < 1) {
-                context.putImageData(canvasData, 0, 0);
-			    context.fillStyle = "#FFFFFF";
-            }
+            
+            context.putImageData(canvasData, 0, 0);
+			context.fillStyle = "#FFFFFF";
 
-            if (keyArray[1] && fractal.cl_initted < 1) {
-                loadKernel("clProcessImage");
-                fractal.cl_initted = 1;
-            } else if (keyArray[1]) {console.log("CL ALREADY INITIALIZED");}
+            if (keyArray[1] && fractal.cl_initted < 1) fractal.cl_initted = 1;
+            else if (keyArray[1]) fractal.cl_initted = 0;
+
 			if (!fractal.progress) context.fillText("Loading Buffer", 0, 15);
 
 			//saveImg();

@@ -73,7 +73,7 @@ function bufferData() {
 	lMaxI = MaxI + (MaxI - MinI)*mult;
 
 	var ref = (lMaxR - lMinR)/(dimX*RENDER_DISTANCE);
-	var imf = (lMaxI - lMinI)/(dimY*RENDE:qR_DISTANCE);
+	var imf = (lMaxI - lMinI)/(dimY*RENDER_DISTANCE);
 
 	var progress = 0;
 	var val, z;
