@@ -3,7 +3,7 @@
 	include "data/connect.php";
 ?>
 <head>
-    <!--script id="clProgramGetColor" type="text/x-opencl">
+    <!--script id="clProcessImage" type="text/x-opencl">
         kernel void clProcessImage(global const uchar4* src,
                                    global uchar4* dest, uint width, uint height) {
             uint x = get_global_id(0);
@@ -116,7 +116,70 @@
 					getArticles();
 					break;
 			}
-		}
+        }
+        
+function loadKernel(id) {
+    var kernelElement = document.getElementById(id);
+    vectorAdd(kernelElement.text, id);
+    
+    if (kernelElement.src != "") {
+		var mHttpReq = new XMLHttpRequest();
+
+		mHttpReq.onreadystatechange = function() {
+			kernelSource = mHttpReq.responseText;
+            
+            vectorAdd(kernelSource, id);
+		};
+
+		mHttpReq.open("GET", kernelElement.src,false);
+		mHttpReq.send("NULL");
+	}
+}
+
+function vectorAdd(kernelSource, id) {
+    
+    try {
+        if (!detectCL()) return;
+
+        var ctx = webcl.createContext();
+        var width = canvas.width;
+        var height = canvas.height;
+        var buff_size = canvas.width * canvas.height * 4;
+        var buff_in =  ctx.createBuffer(WebCL.MEM_READ_ONLY, buff_size);
+        var buff_out = ctx.createBuffer(WebCL.MEM_WRITE_ONLY, buff_size);
+        console.log(kernelSource);
+        var program = ctx.createProgram(kernelSource);
+        var device = ctx.getInfo(WebCL.CONTEXT_DEVICES)[0];
+        try {
+            program.build([device], "");
+        } catch (e) {
+            alert ("Failed to build. Error " +
+                   program.getBuildInfo (device, WebCL.PROGRAM_BUILD_STATUS) +
+                   ": " + program.getBuildInfo (device, WebCL.PROGRAM_BUILD_LOG));
+            throw e;
+        }
+
+        console.log(id);
+        var kernel = program.createKernel(id);
+        kernel.setArg(0, buff_in);  kernel.setArg(1, buff_out);
+        kernel.setArg(2, new Uint32Array([width]));
+        kernel.setArg(3, new Uint32Array([height]));
+
+        var cmdQueue = ctx.createCommandQueue(device);
+        cmdQueue.enqueueWriteBuffer(
+                buff_in, false, 0, buffsize, context.getImageData(0,0,width,height).data);
+        var localWS = [16, 4];
+        var globalWS = [Math.ceil (width/localWS[0]) * localWS[0],
+                        Math.ceil (height/localWS[1]) * localWS[1]];
+
+        cmdQueue.enqueueNDRangeKernel(kernel, globalWS.length, null, globalWS, localWS);
+        cmdQueue.enqueueReadBuffer(buff_out, false, 0, buffsize, context.getImageData(0,0,width,height).data);
+        cmdQueue.finish();
+	} catch (e) {
+		console.log("ERROR " + e.message);
+		throw e;
+	}
+}
 
 		function detectCL() {
 			if (window.webcl == undefined) {
@@ -151,7 +214,7 @@
 
 <body onresize="modSize()" onload="
 			getArticles();
-			detectCL();loadKernel('clProgramVectorAdd');">
+			detectCL();">
 
 <!--For Page Border --!>
 <div id="border">

@@ -3,7 +3,7 @@
 	include "data/connect.php";
 ?>
 <head>
-    <!--script id="clProgramGetColor" type="text/x-opencl">
+    <!--script id="clProcessImage" type="text/x-opencl">
         kernel void clProcessImage(global const uchar4* src,
                                    global uchar4* dest, uint width, uint height) {
             uint x = get_global_id(0);
@@ -116,8 +116,8 @@
 					getArticles();
 					break;
 			}
-		}
-
+        }
+        
 		function detectCL() {
 			if (window.webcl == undefined) {
 				alert("OPENCL: Unfortunately your system does not support WebCL. " +

@@ -2,14 +2,12 @@
 /**
 	* Experimenting with OpenCL
 	* */
+
 function loadKernel(id) {
     var kernelElement = document.getElementById(id);
-    vectorAdd(kernelElement.text);
     
-    console.log("TEST, " + id);
     if (kernelElement.src != "") {
 		var mHttpReq = new XMLHttpRequest();
-        console.log("TEST, " + id);
 
 		mHttpReq.onreadystatechange = function() {
 			kernelSource = mHttpReq.responseText;
@@ -20,23 +18,22 @@ function loadKernel(id) {
 		mHttpReq.open("GET", kernelElement.src,false);
 		mHttpReq.send("NULL");
 	}
+    
+    vectorAdd(kernelElement.text, id);
 }
 
 function vectorAdd(kernelSource, id) {
     
     try {
         if (!detectCL()) return;
-
         var ctx = webcl.createContext();
         var width = canvas.width;
         var height = canvas.height;
         var buff_size = canvas.width * canvas.height * 4;
         var buff_in =  ctx.createBuffer(WebCL.MEM_READ_ONLY, buff_size);
         var buff_out = ctx.createBuffer(WebCL.MEM_WRITE_ONLY, buff_size);
-
         var program = ctx.createProgram(kernelSource);
         var device = ctx.getInfo(WebCL.CONTEXT_DEVICES)[0];
-
         try {
             program.build([device], "");
         } catch (e) {
@@ -46,22 +43,28 @@ function vectorAdd(kernelSource, id) {
             throw e;
         }
 
-        console.log(id);
         var kernel = program.createKernel(id);
         kernel.setArg(0, buff_in);  kernel.setArg(1, buff_out);
         kernel.setArg(2, new Uint32Array([width]));
         kernel.setArg(3, new Uint32Array([height]));
 
         var cmdQueue = ctx.createCommandQueue(device);
+        var pixels = context.getImageData(0,0,width,height);
+        console.log(pixels.data[0]);
         cmdQueue.enqueueWriteBuffer(
-                buff_in, false, 0, buffsize, context.getImageData(0,0,width,height).data);
+                buff_in, false, 0, buff_size, pixels.data);
         var localWS = [16, 4];
         var globalWS = [Math.ceil (width/localWS[0]) * localWS[0],
                         Math.ceil (height/localWS[1]) * localWS[1]];
 
         cmdQueue.enqueueNDRangeKernel(kernel, globalWS.length, null, globalWS, localWS);
-        cmdQueue.enqueueReadBuffer(buff_out, false, 0, buffsize, context.getImageData(0,0,width,height).data);
+        cmdQueue.enqueueReadBuffer(buff_out, false, 0, buff_size, pixels.data);
         cmdQueue.finish();
+       
+        console.log("PROCESSED"); 
+        context.putImageData(pixels, 0, 0);
+        //console.log(pixels.data[0]);
+        
 	} catch (e) {
 		console.log("ERROR " + e.message);
 		throw e;
@@ -109,6 +112,7 @@ complex.prototype.square = function() {
 
 fractal = {
 	initted: 0,
+    cl_initted: 0,
 	width: canvas.width,
 	height: canvas.height,
 	fps: 60,
@@ -130,6 +134,7 @@ fractal = {
 	bufferedDisplay: 0,
 
 	update: function() {
+        //if (!fractal.cl_initted) {loadKernel("clProcessImage");fractal.cl_initted = 1;}
 		if (!fractal.initted) {
 			var RENDER_DISTANCE = fractal.RENDER_DISTANCE
 			fractal.offX = fractal.width*(RENDER_DISTANCE-1)/2;
@@ -190,13 +195,16 @@ fractal = {
 					fractal.color(x, y, r, g, b, 256);
 				}
 			}
-	
-			context.putImageData(canvasData, 0, 0);
-			context.fillStyle = "#FFFFFF";
-
-            if (keyArray[1]) {
-                loadKernel("clProgramColor");
+            console.log(fractal.cl_initted);	
+			if (fractal.cl_initted < 1) {
+                context.putImageData(canvasData, 0, 0);
+			    context.fillStyle = "#FFFFFF";
             }
+
+            if (keyArray[1] && fractal.cl_initted < 1) {
+                loadKernel("clProcessImage");
+                fractal.cl_initted = 1;
+            } else if (keyArray[1]) {console.log("CL ALREADY INITIALIZED");}
 			if (!fractal.progress) context.fillText("Loading Buffer", 0, 15);
 
 			//saveImg();
